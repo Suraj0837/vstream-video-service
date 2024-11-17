@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+		http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+		http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+
+    <changeSet id="v1-01" author="Suraj">
+
+        <comment>create videos table</comment>
+        <createTable tableName="video_metadata">
+            <column name="video_id" type="binary(16)">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="title" type="varchar(255)">
+                <constraints nullable="false" unique="false" />
+            </column>
+            <column name="uploader_id" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="description" type="varchar(255)" />
+            <column name="thumbnail_url" type="varchar(255)" />
+            <column name="duration" type="INT" />
+            <column name="file_size" type="BIGINT" />
+            <column name="upload_date" type="datetime" />
+            <column name="video_url" type="varchar(255)" />
+        </createTable>
+    </changeSet>
+</databaseChangeLog>
