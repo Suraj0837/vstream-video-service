@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+		http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+		http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+		http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+
+    <changeSet id="v1-01" author="Suraj">
+
+        <comment>create accounts table</comment>
+        <createTable tableName="accounts">
+            <column name="account_id" type="varchar(255)">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="account_name" type="varchar(30)">
+                <constraints nullable="false" unique="true" />
+            </column>
+            <column name="owner_name" type="varchar(30)">
+                <constraints nullable="false" />
+            </column>
+            <column name="organisation_name" type="varchar(30)" />
+            <column name="address" type="varchar(100)" />
+            <column name="city" type="varchar(85)" />
+            <column name="state" type="varchar(30)" />
+            <column name="country" type="varchar(56)" />
+            <column name="postal_code" type="varchar(10)" />
+            <column name="created" type="datetime" />
+        </createTable>
+
+        <comment>create user_roles table</comment>
+        <createTable tableName="user_roles">
+            <column name="user_role_id" type="varchar(255)">
+                <constraints primaryKey="true"/>
+            </column>
+            <column name="user_id" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="is_admin" type="boolean"/>
+            <column name="is_owner" type="boolean"/>
+            <column name="is_reporter" type="boolean"/>
+        </createTable>
+
+        <comment>create users table</comment>
+        <createTable tableName="users">
+            <column name="user_id" type="varchar(255)">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="email_id" type="varchar(50)">
+                <constraints nullable="false" unique="true" />
+            </column>
+            <column name="account_id" type="varchar(255)">
+                <constraints nullable="true" />
+            </column>
+            <column name="first_name" type="varchar(20)" />
+            <column name="last_name" type="varchar(20)" />
+            <column name="date_of_birth" type="date" />
+            <column name="phone_number" type="varchar(20)">
+                <constraints nullable="false" unique="true" />
+            </column>
+            <column name="user_password" type="varchar(200)" />
+            <column name="is_email_verified" type="boolean"/>
+            <column name="created" type="datetime" />
+            <column name="modified" type="datetime" />
+        </createTable>
+
+        <comment>Create domains table</comment>
+        <createTable tableName="domains">
+            <column name="domain_id" type="varchar(255)">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="domain_name" type="varchar(100)">
+                <constraints unique="true" nullable="false" />
+            </column>
+            <column name="account_id" type="varchar(255)" />
+            <column name="record_count" type="int" defaultValue="0" />
+            <column name="created" type="datetime" />
+            <column name="modified" type="datetime" />
+        </createTable>
+
+        <comment>Type DNS classes</comment>
+
+        <comment>Create records table</comment>
+        <createTable tableName="records">
+            <column name="record_id" type="varchar(255)">
+                <constraints primaryKey="true" />
+            </column>
+            <column name="record_name" type="varchar(100)">
+                <constraints nullable="false" />
+            </column>
+            <column name="ttl" type="bigint" />
+            <column name="dclass" type="varchar(15)" >
+                <constraints nullable="false" />
+            </column>
+            <column name="record_type" type="varchar(10)">
+                <constraints nullable="false" />
+            </column>
+            <column name="record_data" type="clob" />
+            <column name="domain_id" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="created" type="datetime" />
+            <column name="modified" type="datetime" />
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="users" baseColumnNames="account_id"
+                                 constraintName="users_ref_accounts"
+                                 referencedTableName="accounts" referencedColumnNames="account_id" />
+        <addForeignKeyConstraint baseTableName="user_roles" baseColumnNames="user_id"
+                                 constraintName="user_roles_ref_users"
+                                 referencedTableName="users" referencedColumnNames="user_id"/>
+        <addForeignKeyConstraint baseTableName="domains" baseColumnNames="account_id"
+                                 constraintName="domains_ref_accounts"
+                                 referencedTableName="accounts" referencedColumnNames="account_id" />
+        <addForeignKeyConstraint baseTableName="records" baseColumnNames="domain_id"
+                                 constraintName="records_ref_domain"
+                                 referencedTableName="domains" referencedColumnNames="domain_id" />
+    </changeSet>
+</databaseChangeLog>
