@@ -7,9 +7,12 @@
 		http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
 		http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
 
-    <include file="version/db.changelog-1.0_DDL_video_metadata.xml" relativeToChangelogFile="true"/>
-    <include file="version/db.changelog-2.0_updateDDL_addColumnsInVideoMetadata.xml" relativeToChangelogFile="true"/>
-    <include file="version/db.changelog-3.0_updateDDL_addColumnInVideoMetadata.xml" relativeToChangelogFile="true"/>
-    <include file="version/db.changelog-4.0_addDDL_addVideoLikes.xml" relativeToChangelogFile="true"/>
+    <changeSet id="update_video_metadata_table" author="Suraj">
+        <addColumn tableName="video_metadata">
+            <column name="view_count" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false" />
+            </column>
+        </addColumn>
+    </changeSet>
 
 </databaseChangeLog>

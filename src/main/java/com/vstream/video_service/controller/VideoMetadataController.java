@@ -4,11 +4,14 @@ import com.vstream.video_service.constant.AppConstants;
 import com.vstream.video_service.dto.UploadVideoDTO;
 import com.vstream.video_service.dto.VideoMetadataDTO;
 import com.vstream.video_service.model.VideoMetadata;
+import com.vstream.video_service.service.VideoLikeService;
 import com.vstream.video_service.service.VideoMetadataService;
+import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -20,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/videos")
@@ -29,6 +33,9 @@ public class VideoMetadataController {
 
     @Autowired
     private VideoMetadataService videoMetadataService;
+
+    @Autowired
+    private VideoLikeService videoLikeService;
 
     private final String hlsBaseDir = "/home/surajp2909/Videos/vstream"; // Base directory for HLS files
 
@@ -124,6 +131,60 @@ public class VideoMetadataController {
 
         return ResponseEntity.ok(videos);  // Return the filtered list of videos
     }
+
+    // API to update view count
+    @PutMapping("/{videoId}/views")
+    public ResponseEntity<VideoMetadataDTO> updateViewCount(@PathVariable String videoId) {
+        try {
+            // Call the service method to update the view count
+            VideoMetadataDTO updatedMetadataDTO = videoMetadataService.incrementViewCount(videoId);
+            if (updatedMetadataDTO == null) {
+                log.error("Video not found with ID: {}", videoId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+
+            return ResponseEntity.ok(updatedMetadataDTO);
+        } catch (Exception e) {
+            log.error("Error updating view count for video ID: {}", videoId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    // API to update like count
+    @Transactional
+    @PutMapping("/{videoId}/likes")
+    public ResponseEntity<?> updateLikeCount(@PathVariable String videoId,
+                                                            @RequestParam String userId) {
+        try {
+            // Check if the user has already liked the video
+
+
+
+            if (videoLikeService.checkIfUserVideoMappingExist(userId, videoId)) {
+                log.error("User {} has already liked video with ID: {}", userId, videoId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("User can only like the video once.");  // User can only like the video once
+            }
+
+            // Proceed with the like operation, increment the like count
+            VideoMetadataDTO updatedMetadataDTO = videoMetadataService.incrementLikeCount(videoId);
+
+            if (updatedMetadataDTO == null) {
+                log.error("Video not found with ID: {}", videoId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+
+            // Save the like record to prevent duplicate likes
+            videoLikeService.likeVideo(UUID.fromString(userId), UUID.fromString(videoId));
+
+            return ResponseEntity.ok(updatedMetadataDTO);
+
+        } catch (Exception e) {
+            log.error("Error updating like count for video ID: {}", videoId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
 
 }
 

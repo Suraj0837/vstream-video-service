@@ -51,4 +51,6 @@ public class VideoMetadata {
     @Column(name = "like_count", nullable = false)
     private Long likeCount = 0L;
 
+    @Column(name = "view_count", nullable = false)
+    private Long viewCount = 0L;
 }
