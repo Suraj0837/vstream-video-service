@@ -18,4 +18,5 @@ public class VideoMetadataDTO {
     private LocalDateTime uploadDate;
     private String videoUrl;
     private Long likeCount = 0L;
+    private Long viewCount = 0L;
 }

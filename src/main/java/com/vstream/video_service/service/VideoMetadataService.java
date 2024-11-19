@@ -30,6 +30,9 @@ import static com.vstream.video_service.constant.AppConstants.videoStorageDir;
 public class VideoMetadataService {
 
     @Autowired
+    private ModelMapper modelMapper;
+
+    @Autowired
     private VideoMetadataRepository videoMetadataRepository;
 
     @Autowired
@@ -121,20 +124,45 @@ public class VideoMetadataService {
                 .collect(Collectors.toList());
     }
 
-    // Convert VideoMetadata entity to VideoMetadataDTO
-    private VideoMetadataDTO convertToDTO(VideoMetadata videoMetadata) {
-        VideoMetadataDTO dto = new VideoMetadataDTO();
-        dto.setVideoId(videoMetadata.getVideoId().toString());
-        dto.setTitle(videoMetadata.getTitle());
-        dto.setUploaderId(videoMetadata.getUploaderId());
-        dto.setDescription(videoMetadata.getDescription());
-        dto.setThumbnailUrl(videoMetadata.getThumbnailUrl());
-        dto.setDuration(videoMetadata.getDuration());  // Assuming duration is stored as String in the entity
-        dto.setFileSize(videoMetadata.getFileSize());
-        dto.setUploadDate(videoMetadata.getUploadDate());
-        dto.setVideoUrl(videoMetadata.getVideoUrl());
-        return dto;
+    public VideoMetadataDTO incrementViewCount(String videoId) {
+        Optional<VideoMetadata> videoMetadataOpt = videoMetadataRepository.findById(UUID.fromString(videoId));
+        if (videoMetadataOpt.isPresent()) {
+            VideoMetadata videoMetadata = videoMetadataOpt.get();
+            videoMetadata.setViewCount(videoMetadata.getViewCount() + 1);
+            return modelMapper.map(videoMetadataRepository.save(videoMetadata), VideoMetadataDTO.class);
+        } else {
+            return null;  // Video not found
+        }
     }
+
+    public VideoMetadataDTO convertToDTO(VideoMetadata videoMetadata) {
+        VideoMetadataDTO videoMetadataDTO = new VideoMetadataDTO();
+        videoMetadataDTO.setVideoId(String.valueOf(videoMetadata.getVideoId()));
+        videoMetadataDTO.setTitle(videoMetadata.getTitle());
+        videoMetadataDTO.setUploaderId(videoMetadata.getUploaderId());
+        videoMetadataDTO.setDescription(videoMetadata.getDescription());
+        videoMetadataDTO.setThumbnailUrl(videoMetadata.getThumbnailUrl());
+        videoMetadataDTO.setDuration(videoMetadata.getDuration());
+        videoMetadataDTO.setFileSize(videoMetadata.getFileSize());
+        videoMetadataDTO.setUploadDate(videoMetadata.getUploadDate());
+        videoMetadataDTO.setVideoUrl(videoMetadata.getVideoUrl());
+        videoMetadataDTO.setLikeCount(videoMetadata.getLikeCount());
+        videoMetadataDTO.setViewCount(videoMetadata.getViewCount());
+
+        return videoMetadataDTO;
+    }
+
+    public VideoMetadataDTO incrementLikeCount(String videoId) {
+        Optional<VideoMetadata> videoMetadataOpt = videoMetadataRepository.findById(UUID.fromString(videoId));
+        if (videoMetadataOpt.isPresent()) {
+            VideoMetadata videoMetadata = videoMetadataOpt.get();
+            videoMetadata.setLikeCount(videoMetadata.getLikeCount() + 1);
+            return modelMapper.map(videoMetadataRepository.save(videoMetadata), VideoMetadataDTO.class);
+        } else {
+            return null;  // Video not found
+        }
+    }
+
 
 }
 
