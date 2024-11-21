@@ -11,5 +11,6 @@
     <include file="version/db.changelog-2.0_updateDDL_addColumnsInVideoMetadata.xml" relativeToChangelogFile="true"/>
     <include file="version/db.changelog-3.0_updateDDL_addColumnInVideoMetadata.xml" relativeToChangelogFile="true"/>
     <include file="version/db.changelog-4.0_addDDL_addVideoLikes.xml" relativeToChangelogFile="true"/>
+    <include file="version/db.changelog-5.0_addDDL_addComments.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
