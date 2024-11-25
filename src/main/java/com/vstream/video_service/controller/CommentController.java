@@ -13,7 +13,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/comments")
 @RequiredArgsConstructor
-@Slf4j // Enables logging
+@Slf4j
+@CrossOrigin(origins = "http://localhost:3000")
 public class CommentController {
 
     private final CommentService commentService;

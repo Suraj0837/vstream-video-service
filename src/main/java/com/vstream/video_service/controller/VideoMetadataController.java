@@ -1,6 +1,7 @@
 package com.vstream.video_service.controller;
 
 import com.vstream.video_service.constant.AppConstants;
+import com.vstream.video_service.dto.UpdateVideoDTO;
 import com.vstream.video_service.dto.UploadVideoDTO;
 import com.vstream.video_service.dto.VideoMetadataDTO;
 import com.vstream.video_service.model.VideoMetadata;
@@ -22,13 +23,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/videos")
 @Slf4j
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://10.42.0.225:8001/", "http://localhost:3000"})
 public class VideoMetadataController {
 
     @Autowired
@@ -88,6 +90,24 @@ public class VideoMetadataController {
         }
     }
 
+    @PutMapping("/videos/{videoId}")
+    public ResponseEntity<VideoMetadata> updateVideoDetails(
+            @PathVariable String videoId,
+            @ModelAttribute UpdateVideoDTO updateVideoDTO
+    ) {
+        try {
+            log.info("Received update request for video ID: {}", videoId);
+            VideoMetadata updatedMetadata = videoMetadataService.updateVideoDetails(videoId, updateVideoDTO);
+            log.info("Successfully updated video metadata with ID: {}", updatedMetadata.getVideoId());
+
+            return ResponseEntity.ok(updatedMetadata);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("VideoMetadataController::updateVideoDetails {}", e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
     @GetMapping("/{videoId}")
     public ResponseEntity<VideoMetadataDTO> getVideoMetadata(@PathVariable String videoId) {
         log.info("Fetching metadata for video with ID: {}", videoId);
@@ -109,6 +129,8 @@ public class VideoMetadataController {
                     videoMetadataDTO.setFileSize(metadata.getFileSize());
                     videoMetadataDTO.setUploadDate(metadata.getUploadDate());
                     videoMetadataDTO.setVideoUrl(metadata.getVideoUrl());
+                    videoMetadataDTO.setLikeCount(metadata.getLikeCount());
+                    videoMetadataDTO.setViewCount(metadata.getViewCount());
 
                     return ResponseEntity.ok(videoMetadataDTO);
                 })
@@ -123,12 +145,25 @@ public class VideoMetadataController {
             @RequestParam Optional<String> userId,
             @RequestParam Optional<Boolean> uploadInProgress) {
 
+        // Logging input parameters
+        log.info("Fetching video metadata. User ID: {}, Upload in progress: {}",
+                userId.orElse("Not provided"),
+                uploadInProgress.orElse(null));
+
         List<VideoMetadataDTO> videos = videoMetadataService.getAllVideos(userId, uploadInProgress);
 
+        // Logging the result
         if (videos.isEmpty()) {
+            log.info("No videos found for the provided criteria: User ID: {}, Upload in progress: {}",
+                    userId.orElse("Not provided"),
+                    uploadInProgress.orElse(null));
             return ResponseEntity.noContent().build();  // No videos found
         }
 
+        log.info("Returning {} video(s) for User ID: {}, Upload in progress: {}",
+                videos.size(),
+                userId.orElse("Not provided"),
+                uploadInProgress.orElse(null));
         return ResponseEntity.ok(videos);  // Return the filtered list of videos
     }
 
@@ -185,6 +220,66 @@ public class VideoMetadataController {
         }
     }
 
+    @DeleteMapping("/{videoId}")
+    public ResponseEntity<String> deleteVideo(@PathVariable String videoId) {
+        try {
+            log.info("Received delete request for video ID: {}", videoId);
 
+            // Call the service to delete the video
+            boolean isDeleted = videoMetadataService.deleteVideo(videoId);
+            if (isDeleted) {
+                log.info("Successfully deleted video with ID: {}", videoId);
+                return ResponseEntity.ok("Video deleted successfully");
+            } else {
+                log.warn("Video with ID {} not found", videoId);
+                return ResponseEntity.status(404).body("Video not found");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error deleting video with ID: {}. {}", videoId, e.getMessage());
+            return ResponseEntity.status(500).body("Internal server error");
+        }
+    }
+
+    @GetMapping("/video-upload-trends")
+    public Map<String, Long> getVideoUploadTrends(@RequestParam String period) {
+        return videoMetadataService.getUploadTrends(period);
+    }
+
+    @GetMapping("/upload-count-by-user")
+    public ResponseEntity<Map<String, Long>> getUploadCountByUser() {
+        try {
+            Map<String, Long> uploadCountByUser = videoMetadataService.getUploadCountByUser();
+            return ResponseEntity.ok(uploadCountByUser);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error fetching upload count by user: {}", e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping("/views-vs-likes")
+    public ResponseEntity<List<Map<String, Object>>> getViewsVsLikes() {
+        try {
+            List<Map<String, Object>> viewsVsLikes = videoMetadataService.getViewsVsLikes();
+            return ResponseEntity.ok(viewsVsLikes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error fetching views vs likes: {}", e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping("/like-count-distribution")
+    public ResponseEntity<Map<String, Long>> getLikeCountDistribution() {
+        try {
+            Map<String, Long> likeCountDistribution = videoMetadataService.getLikeCountDistribution();
+            return ResponseEntity.ok(likeCountDistribution);
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Error fetching like count distribution: {}", e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+    }
 }
 

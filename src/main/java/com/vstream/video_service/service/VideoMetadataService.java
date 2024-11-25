@@ -1,6 +1,7 @@
 package com.vstream.video_service.service;
 
 import com.vstream.video_service.constant.AppConstants;
+import com.vstream.video_service.dto.UpdateVideoDTO;
 import com.vstream.video_service.dto.UploadVideoDTO;
 import com.vstream.video_service.dto.VideoMetadataDTO;
 import com.vstream.video_service.model.VideoMetadata;
@@ -16,10 +17,11 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.IsoFields;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.vstream.video_service.constant.AppConstants.thumbnailStorageDir;
@@ -163,6 +165,145 @@ public class VideoMetadataService {
         }
     }
 
+    @Transactional
+    public boolean deleteVideo(String videoId) {
+        Optional<VideoMetadata> videoMetadataOpt = videoMetadataRepository.findByVideoId(UUID.fromString(videoId));
 
+        if (videoMetadataOpt.isEmpty()) {
+            return false;
+        }
+
+        VideoMetadata videoMetadata = videoMetadataOpt.get();
+
+        // Delete the video and thumbnail files from the storage
+        try {
+            Path hlsFolderPath = Paths.get(AppConstants.videoStorageDir, videoMetadata.getUploaderId(), videoId);
+            Path videoFilePath = Paths.get(videoStorageDir, videoMetadata.getVideoUrl());
+            Path thumbnailFilePath = Paths.get(thumbnailStorageDir, videoMetadata.getThumbnailUrl());
+            deleteDirectory(hlsFolderPath);
+
+            Files.deleteIfExists(videoFilePath);
+            Files.deleteIfExists(thumbnailFilePath);
+
+            // Delete metadata from the database
+            videoMetadataRepository.delete(videoMetadata);
+
+            return true;
+        } catch (Exception e) {
+            log.error("Error while deleting video and its metadata: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private void deleteDirectory(Path directory) throws Exception {
+        if (Files.exists(directory)) {
+            Files.walk(directory)
+                    .sorted((path1, path2) -> path2.compareTo(path1))  // Delete files before directories
+                    .forEach(path -> {
+                        try {
+                            Files.delete(path);
+                        } catch (Exception e) {
+                            log.error("Error deleting file/directory: {}", path, e);
+                        }
+                    });
+        }
+    }
+
+    @Transactional
+    public VideoMetadata updateVideoDetails(String videoId, UpdateVideoDTO updateVideoDTO) throws Exception {
+        // Fetch existing video metadata
+        VideoMetadata videoMetadata = videoMetadataRepository.findById(UUID.fromString(videoId))
+                .orElseThrow(() -> new Exception("Video with ID " + videoId + " not found"));
+
+        log.info("Found video metadata for ID: {}", videoId);
+
+        // Update title if provided
+        if (updateVideoDTO.getTitle() != null && !updateVideoDTO.getTitle().isEmpty()) {
+            videoMetadata.setTitle(updateVideoDTO.getTitle());
+            log.debug("Updated title: {}", updateVideoDTO.getTitle());
+        }
+
+        // Update description if provided
+        if (updateVideoDTO.getDescription() != null && !updateVideoDTO.getDescription().isEmpty()) {
+            videoMetadata.setDescription(updateVideoDTO.getDescription());
+            log.debug("Updated description: {}", updateVideoDTO.getDescription());
+        }
+
+        // Update thumbnail if provided
+        if (updateVideoDTO.getThumbnailFile() != null && !updateVideoDTO.getThumbnailFile().isEmpty()) {
+            String relativeThumbnailPath = videoMetadata.getUploaderId() + "/"
+                    + fileService.getFileName(updateVideoDTO.getThumbnailFile());
+            Path thumbnailFilePath = Paths.get(thumbnailStorageDir, relativeThumbnailPath);
+            Files.createDirectories(thumbnailFilePath.getParent());
+            updateVideoDTO.getThumbnailFile().transferTo(thumbnailFilePath.toFile());
+            videoMetadata.setThumbnailUrl(relativeThumbnailPath);
+            log.debug("Updated thumbnail file: {}", relativeThumbnailPath);
+        }
+
+        // Save updated metadata
+        VideoMetadata updatedMetadata = videoMetadataRepository.save(videoMetadata);
+        log.info("Successfully updated video metadata with ID: {}", updatedMetadata.getVideoId());
+
+        return updatedMetadata;
+    }
+
+    public Map<String, Long> getUploadTrends(String period) {
+        List<VideoMetadata> videos = videoMetadataRepository.findAll();
+        return videos.stream()
+                .collect(Collectors.groupingBy(video ->
+                        getPeriodKey(LocalDate.from(video.getUploadDate()), period), Collectors.counting()));
+    }
+
+    private String getPeriodKey(LocalDate uploadDate, String period) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        switch (period) {
+            case "day":
+                return uploadDate.format(formatter);
+            case "week":
+                return uploadDate.getYear() + "-W" + uploadDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
+            case "month":
+                return uploadDate.getYear() + "-" + uploadDate.getMonthValue();
+            default:
+                throw new IllegalArgumentException("Invalid period: " + period);
+        }
+    }
+
+    public Map<String, Long> getUploadCountByUser() {
+        // This method will get the count of videos uploaded by each user
+        return videoMetadataRepository.findAll().stream()
+                .collect(Collectors.groupingBy(VideoMetadata::getUploaderId, Collectors.counting()));
+    }
+
+    public List<Map<String, Object>> getViewsVsLikes() {
+        // This method returns a list of maps with view count and like count
+        return videoMetadataRepository.findAll().stream()
+                .map(video -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("views", video.getViewCount());
+                    data.put("likes", video.getLikeCount());
+                    return data;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public Map<String, Long> getLikeCountDistribution() {
+        // This method calculates the like count distribution in ranges
+        Map<String, Long> distribution = new HashMap<>();
+        List<VideoMetadata> allVideos = videoMetadataRepository.findAll();
+
+        for (VideoMetadata video : allVideos) {
+            int likeCount = Math.toIntExact(video.getLikeCount());
+            String range = getLikeCountRange(likeCount);
+            distribution.put(range, distribution.getOrDefault(range, 0L) + 1);
+        }
+        return distribution;
+    }
+
+    private String getLikeCountRange(int likeCount) {
+        if (likeCount <= 10) return "0-10";
+        if (likeCount <= 50) return "11-50";
+        if (likeCount <= 100) return "51-100";
+        return "100+";
+    }
 }
 
